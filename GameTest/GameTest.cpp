@@ -29,8 +29,9 @@ class Alpaca {
 public:
 	const float ALPACA_SPEED = 0.5f;
 	const float SPIT_SPEED = 0.7f;
-	int hearts;
-	int spitsCount;
+	int hearts = 3;
+	int spitsCount = 5;
+	bool isInvincible = false;
 	CSimpleSprite* alpacaSprite;
 	std::vector<CSimpleSprite*> spits;
 
@@ -133,6 +134,21 @@ static void HandleSpitZookeepersCollision()
 }
 
 
+static void HandleAlpacaZookeeperCollision()
+{
+	for (const auto& zookeeper : zookeepers->zookeeperSprites) {
+		if (isColliding(alpaca->alpacaSprite, zookeeper)) {
+			zookeeper->SetAngle(-PI/2.2f);
+			if (!alpaca->isInvincible)
+			{
+				alpaca->hearts--;
+				alpaca->isInvincible = true;
+			}
+		}
+	}
+}
+
+
 static void UpdateAlpacaPos(float deltaTime)
 {
 	float x, y;
@@ -218,6 +234,7 @@ void Update(float deltaTime)
 	{
 		zookeepers->RemoveOutOfBoundZookepers();
 		UpdateZookeeperPos(deltaTime);
+		HandleAlpacaZookeeperCollision();
 	}
 	
 	if (hasSpits && hasZookeepers) HandleSpitZookeepersCollision();
@@ -254,9 +271,9 @@ void Render()
 	//------------------------------------------------------------------------
 	// Example Text.
 	//------------------------------------------------------------------------
-	//std::string size = std::to_string(zookeepers->zookeeperSprites.size());
-	//const char* size_c = size.c_str();
-	//App::Print(100, 100, size_c);
+	std::string heartCount = std::to_string(alpaca->hearts);
+	const char* heartCountStr = heartCount.c_str();
+	App::Print(100, 100, heartCountStr);
 
 	//------------------------------------------------------------------------
 	// Example Line Drawing.
@@ -279,15 +296,14 @@ void Render()
 	}*/
 
 }
+
+
 //------------------------------------------------------------------------
 // Add your shutdown code here. Called when the APP_QUIT_KEY is pressed.
 // Just before the app exits.
 //------------------------------------------------------------------------
 void Shutdown()
 {
-	//------------------------------------------------------------------------
-	// Example Sprite Code....
 	delete alpaca;
 	delete zookeepers;
-	//------------------------------------------------------------------------
 }
