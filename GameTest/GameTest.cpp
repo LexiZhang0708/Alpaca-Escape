@@ -11,7 +11,7 @@
 #include <random>
 #include <iostream>
 #include <algorithm>
-
+#include <chrono>
 
 static float GenerateRandNum()
 {
@@ -32,6 +32,7 @@ public:
 	int hearts = 3;
 	int spitsCount = 5;
 	bool isInvincible = false;
+	std::chrono::steady_clock::time_point invisibleStartTime;
 	CSimpleSprite* alpacaSprite;
 	std::vector<CSimpleSprite*> spits;
 
@@ -143,6 +144,10 @@ static void HandleAlpacaZookeeperCollision()
 			{
 				alpaca->hearts--;
 				alpaca->isInvincible = true;
+				alpaca->invisibleStartTime = std::chrono::steady_clock::now();
+				alpaca->alpacaSprite->SetColor(1.0f, 0.0f, 0.0f);
+				alpaca->alpacaSprite->SetAngle(-0.35);
+				alpaca->alpacaSprite->SetScale(1.2f);
 			}
 		}
 	}
@@ -221,6 +226,15 @@ void Update(float deltaTime)
 	{
 		alpaca->AddSpit();
 		App::PlaySound(".\\TestData\\Test.wav");
+	}
+	if (alpaca->isInvincible)
+	{
+		if (std::chrono::steady_clock::now() >= alpaca->invisibleStartTime + std::chrono::seconds(2)) {
+			alpaca->isInvincible = false;
+			alpaca->alpacaSprite->SetColor(1.0f, 1.0f, 1.0f);
+			alpaca->alpacaSprite->SetAngle(0.0f);
+			alpaca->alpacaSprite->SetScale(1.0f);
+		}
 	}
 
 	bool hasSpits = !alpaca->spits.empty();
