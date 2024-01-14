@@ -11,33 +11,7 @@
 #include <random>
 #include <iostream>
 #include <algorithm>
-//------------------------------------------------------------------------
-// Example data....
-//------------------------------------------------------------------------
 
-struct Alpaca : CSimpleSprite {
-	int hearts;
-	int spitsCount;
-};
-
-
-struct Zookeepers : CSimpleSprite {};
-
-const float ALPACA_SPEED = 0.5f;
-const float ZOOKEEPER_SPEED = 0.3f;
-const float SPIT_SPEED = 0.7f;
-Alpaca *alpaca;
-std::vector<CSimpleSprite *> zookeepers;
-std::vector<CSimpleSprite *> spits;
-
-//enum
-//{
-//	ANIM_FORWARDS,
-//	ANIM_BACKWARDS,
-//	ANIM_LEFT,
-//	ANIM_RIGHT,
-//};
-//------------------------------------------------------------------------
 
 static float GenerateRandNum()
 {
@@ -48,51 +22,77 @@ static float GenerateRandNum()
 }
 
 
-static void AddZookeeper()
-{	
-	CSimpleSprite* zookeeper;
-	zookeeper = App::CreateSprite(".\\TestData\\zookeeper2.png", 1, 1);
+//------------------------------------------------------------------------
+// Class Declarations
+//------------------------------------------------------------------------
+class Alpaca {
+public:
+	const float ALPACA_SPEED = 0.5f;
+	const float SPIT_SPEED = 0.7f;
+	int hearts;
+	int spitsCount;
+	CSimpleSprite* alpacaSprite;
+	std::vector<CSimpleSprite*> spits;
 
-	auto clamp = [](float n, float min, float max) {
-		if (n < min) n = min;
-		if (n > max) n = max;
-		return n;
-		};
+	void AddSpit()
+	{
+		CSimpleSprite* spit;
+		spit = App::CreateSprite(".\\TestData\\spit.png", 1, 1);
 
-	float min = zookeeper->GetHeight() / 2.0f;
-	float max = APP_VIRTUAL_HEIGHT - min;
-	float pos_y = clamp(GenerateRandNum() * APP_VIRTUAL_HEIGHT, min, max);
-	
-	zookeeper->SetPosition(APP_VIRTUAL_WIDTH, pos_y);
-	zookeepers.push_back(zookeeper);
-}
-
-
-static void AddSpit()
-{
-	CSimpleSprite* spit;
-	spit = App::CreateSprite(".\\TestData\\spit.png", 1, 1);
-
-	float pos_x, pos_y;
-	alpaca->GetPosition(pos_x, pos_y);
-	spit->SetPosition(pos_x+35, pos_y+25);
-	spits.push_back(spit);
-}
+		float pos_x, pos_y;
+		alpacaSprite->GetPosition(pos_x, pos_y);
+		spit->SetPosition(pos_x + 35, pos_y + 25);
+		spits.push_back(spit);
+	}
+};
 
 
-static void RemoveOutOfBoundZookepers()
-{	
-	auto isOutOfBound = [](CSimpleSprite* zookeeper)
-	{	
-		float posX, posY;
-		zookeeper->GetPosition(posX, posY);
-		return posX + zookeeper->GetWidth() / 2.0f < 0.0f; // Characters out of the screen
-	};
+class Zookeepers {
+public:
+	const float ZOOKEEPER_SPEED = 0.3f;
+	const int MAX_ZOOKEEPER_COUNT = 12;
+	std::vector<CSimpleSprite*> zookeeperSprites;
 
-	zookeepers.erase(remove_if(zookeepers.begin(), zookeepers.end(), isOutOfBound), zookeepers.end());
-}
+	void AddZookeeper()
+	{
+		CSimpleSprite* zookeeperSprite;
+		zookeeperSprite = App::CreateSprite(".\\TestData\\zookeeper2.png", 1, 1);
+
+		auto clamp = [](float n, float min, float max) {
+			if (n < min) n = min;
+			if (n > max) n = max;
+			return n;
+			};
+
+		float min = zookeeperSprite->GetHeight() / 2.0f;
+		float max = APP_VIRTUAL_HEIGHT - min;
+		float pos_y = clamp(GenerateRandNum() * APP_VIRTUAL_HEIGHT, min, max);
+
+		zookeeperSprite->SetPosition(APP_VIRTUAL_WIDTH, pos_y);
+		zookeeperSprites.push_back(zookeeperSprite);
+	}
+
+	void RemoveOutOfBoundZookepers()
+	{
+		auto isOutOfBound = [](CSimpleSprite* zookeeper)
+			{
+				float posX, posY;
+				zookeeper->GetPosition(posX, posY);
+				return posX + zookeeper->GetWidth() / 2.0f < 0.0f;
+			};
+
+		zookeeperSprites.erase(remove_if(zookeeperSprites.begin(), zookeeperSprites.end(), isOutOfBound), zookeeperSprites.end());
+	}
+};
 
 
+Alpaca* alpaca = new Alpaca;
+Zookeepers* zookeepers = new Zookeepers;
+
+
+//------------------------------------------------------------------------
+// Utility Functions
+//------------------------------------------------------------------------
 static bool isColliding(CSimpleSprite* obj1, CSimpleSprite* obj2) {
 	float obj1Width = obj1->GetWidth() / 2.0f;
 	float obj1Height = obj1->GetHeight() / 2.0f;
@@ -103,7 +103,7 @@ static bool isColliding(CSimpleSprite* obj1, CSimpleSprite* obj2) {
 	float obj2Height = obj2->GetHeight() / 2.0f;
 	float obj2X, obj2Y;
 	obj2->GetPosition(obj2X, obj2Y);
-	
+
 	bool xCollision = std::abs(obj1X - obj2X) <= (obj1Width + obj2Width);
 	bool yCollision = std::abs(obj1Y - obj2Y) <= (obj1Height + obj2Height);
 	return (xCollision && yCollision);
@@ -111,11 +111,11 @@ static bool isColliding(CSimpleSprite* obj1, CSimpleSprite* obj2) {
 
 
 static void HandleSpitZookeepersCollision()
-{	
+{
 	std::vector<CSimpleSprite* > spitsToRemove, zookeepersToRemove;
 
-	for (const auto& spit : spits) {
-		for (const auto& zookeeper : zookeepers) {
+	for (const auto& spit : alpaca->spits) {
+		for (const auto& zookeeper : zookeepers->zookeeperSprites) {
 			if (isColliding(spit, zookeeper)) {
 				spitsToRemove.push_back(spit);
 				zookeepersToRemove.push_back(zookeeper);
@@ -124,13 +124,63 @@ static void HandleSpitZookeepersCollision()
 	}
 
 	for (const auto& spitToRemove : spitsToRemove) {
-		spits.erase(std::remove(spits.begin(), spits.end(), spitToRemove), spits.end());
+		alpaca->spits.erase(std::remove(alpaca->spits.begin(), alpaca->spits.end(), spitToRemove), alpaca->spits.end());
 	}
 
 	for (const auto& zookeeperToRemove : zookeepersToRemove) {
-		zookeepers.erase(std::remove(zookeepers.begin(), zookeepers.end(), zookeeperToRemove), zookeepers.end());
+		zookeepers->zookeeperSprites.erase(std::remove(zookeepers->zookeeperSprites.begin(), zookeepers->zookeeperSprites.end(), zookeeperToRemove), zookeepers->zookeeperSprites.end());
+	}
+}
+
+
+static void UpdateAlpacaPos(float deltaTime)
+{
+	float x, y;
+	alpaca->alpacaSprite->GetPosition(x, y);
+	if (App::GetController().GetLeftThumbStickX() > 0.5f)
+	{
+		/*alpaca->SetAnimation(ANIM_RIGHT);*/
+		x += alpaca->ALPACA_SPEED * deltaTime;
+	}
+	if (App::GetController().GetLeftThumbStickX() < -0.5f)
+	{
+		/*alpaca->SetAnimation(ANIM_LEFT);*/
+		x -= alpaca->ALPACA_SPEED * deltaTime;
+	}
+	if (App::GetController().GetLeftThumbStickY() > 0.5f)
+	{
+		/*alpaca->SetAnimation(ANIM_FORWARDS);*/
+		y += alpaca->ALPACA_SPEED * deltaTime;
+	}
+	if (App::GetController().GetLeftThumbStickY() < -0.5f)
+	{
+		/*alpaca->SetAnimation(ANIM_BACKWARDS);*/
+		y -= alpaca->ALPACA_SPEED * deltaTime;
 	}
 
+	alpaca->alpacaSprite->SetPosition(x, y);
+}
+
+
+static void UpdateSpitPos(float deltaTime) {
+	for (const auto& spit : alpaca->spits)
+	{
+		float posX, posY;
+		spit->GetPosition(posX, posY);
+		posX += alpaca->SPIT_SPEED * deltaTime;
+		spit->SetPosition(posX, posY);
+	}
+}
+
+
+static void UpdateZookeeperPos(float deltaTime) {
+	for (const auto& zookeeper : zookeepers->zookeeperSprites)
+	{
+		float posX, posY;
+		zookeeper->GetPosition(posX, posY);
+		posX -= zookeepers->ZOOKEEPER_SPEED * deltaTime;
+		zookeeper->SetPosition(posX, posY);
+	}
 }
 
 
@@ -139,140 +189,74 @@ static void HandleSpitZookeepersCollision()
 //------------------------------------------------------------------------
 void Init()
 {
-	//------------------------------------------------------------------------
-	// Example Sprite Code....
-	alpaca = static_cast<Alpaca* >(App::CreateSprite(".\\TestData\\alpaca2.png", 1, 1));
-	alpaca->SetPosition(100.0f, 400.0f);
-	//float speed = 1.0f / 15.0f;
-	//testSprite->CreateAnimation(ANIM_BACKWARDS, speed, { 0,1,2,3,4,5,6,7 });
-	//testSprite->CreateAnimation(ANIM_LEFT, speed, { 8,9,10,11,12,13,14,15 });
-	//testSprite->CreateAnimation(ANIM_RIGHT, speed, { 16,17,18,19,20,21,22,23 });
-	//testSprite->CreateAnimation(ANIM_FORWARDS, speed, { 24,25,26,27,28,29,30,31 });
-	//------------------------------------------------------------------------
+	alpaca->alpacaSprite = App::CreateSprite(".\\TestData\\alpaca2.png", 1, 1);
+	alpaca->alpacaSprite->SetPosition(100.0f, 400.0f);
 }
+
 
 //------------------------------------------------------------------------
 // Update your simulation here. deltaTime is the elapsed time since the last update in ms.
 // This will be called at no greater frequency than the value of APP_MAX_FRAME_RATE
 //------------------------------------------------------------------------
 void Update(float deltaTime)
-{
-	//------------------------------------------------------------------------
-	// Example Sprite Code....
-	alpaca->Update(deltaTime);
-	if (App::GetController().GetLeftThumbStickX() > 0.5f)
-	{
-		/*alpaca->SetAnimation(ANIM_RIGHT);*/
-		float x, y;
-		alpaca->GetPosition(x, y);
-		x += ALPACA_SPEED * deltaTime;
-		alpaca->SetPosition(x, y);
-	}
-	if (App::GetController().GetLeftThumbStickX() < -0.5f)
-	{
-		/*alpaca->SetAnimation(ANIM_LEFT);*/
-		float x, y;
-		alpaca->GetPosition(x, y);
-		x -= ALPACA_SPEED * deltaTime;
-		alpaca->SetPosition(x, y);
-	}
-    if (App::GetController().GetLeftThumbStickY() > 0.5f)
-    {
-        /*alpaca->SetAnimation(ANIM_FORWARDS);*/
-        float x, y;
-        alpaca->GetPosition(x, y);
-        y += ALPACA_SPEED * deltaTime;
-        alpaca->SetPosition(x, y);
-    }
-	if (App::GetController().GetLeftThumbStickY() < -0.5f)
-	{
-		/*alpaca->SetAnimation(ANIM_BACKWARDS);*/
-		float x, y;
-		alpaca->GetPosition(x, y);
-		y -= ALPACA_SPEED * deltaTime;
-		alpaca->SetPosition(x, y);
-	}
+{	
+	UpdateAlpacaPos(deltaTime);
 	if (App::GetController().CheckButton(XINPUT_GAMEPAD_DPAD_RIGHT, true))
 	{
-		AddSpit();
+		alpaca->AddSpit();
 		App::PlaySound(".\\TestData\\Test.wav");
 	}
 
-	for (const auto& spit : spits)
-	{
-		float posX, posY;
-		spit->GetPosition(posX, posY);
-		posX += SPIT_SPEED * deltaTime;
-		spit->SetPosition(posX, posY);
-	}
+	bool hasSpits = !alpaca->spits.empty();
+	bool hasZookeepers = !zookeepers->zookeeperSprites.empty();
 
-	HandleSpitZookeepersCollision();
-		
+	if (hasSpits) UpdateSpitPos(deltaTime);
+
+	if (GenerateRandNum() < 0.05 && zookeepers->zookeeperSprites.size() < zookeepers->MAX_ZOOKEEPER_COUNT) zookeepers->AddZookeeper();
+
+	if (hasZookeepers)
+	{
+		zookeepers->RemoveOutOfBoundZookepers();
+		UpdateZookeeperPos(deltaTime);
+	}
 	
-	RemoveOutOfBoundZookepers();
-
-	if (GenerateRandNum() < 0.05 && zookeepers.size() < 10)
-	{
-		AddZookeeper();
-	}
-
-	for (const auto& zookeeper : zookeepers)
-	{
-		float posX, posY;
-		zookeeper->GetPosition(posX, posY);
-		posX -= ZOOKEEPER_SPEED * deltaTime;
-		zookeeper->SetPosition(posX, posY);
-	}
-
-	//if (App::GetController().CheckButton(XINPUT_GAMEPAD_DPAD_UP, false))
-	//{
-	//	testSprite->SetScale(testSprite->GetScale() + 0.1f);
-	//}
-	//if (App::GetController().CheckButton(XINPUT_GAMEPAD_DPAD_DOWN, false))
-	//{
-	//	testSprite->SetScale(testSprite->GetScale() - 0.1f);
-	//}
-	//if (App::GetController().CheckButton(XINPUT_GAMEPAD_DPAD_LEFT, false))
-	//{
-	//	testSprite->SetAngle(testSprite->GetAngle() + 0.1f);
-	//}
-	//if (App::GetController().CheckButton(XINPUT_GAMEPAD_DPAD_RIGHT, false))
-	//{
-	//	testSprite->SetAngle(testSprite->GetAngle() - 0.1f);
-	//}
-	//if (App::GetController().CheckButton(XINPUT_GAMEPAD_A, true))
-	//{
-	//	testSprite->SetAnimation(-1);
-	//}
+	if (hasSpits && hasZookeepers) HandleSpitZookeepersCollision();
 }
+
 
 //------------------------------------------------------------------------
 // Add your display calls here (DrawLine,Print, DrawSprite.) 
 // See App.h 
 //------------------------------------------------------------------------
 void Render()
-{	
+{
 	//------------------------------------------------------------------------
 	// Example Sprite Code....
-	alpaca->Draw();
+	alpaca->alpacaSprite->Draw();
 
-	for (const auto& zookeeper : zookeepers)
+	if (!zookeepers->zookeeperSprites.empty())
 	{
-		zookeeper->Draw();
+		for (const auto& zookeeper : zookeepers->zookeeperSprites)
+			{
+				zookeeper->Draw();
+			}
 	}
-
-	for (const auto& spit : spits)
+	
+	if (!alpaca->spits.empty())
 	{
-		spit->Draw();
+		for (const auto& spit : alpaca->spits)
+		{
+			spit->Draw();
+		}
 	}
 	//------------------------------------------------------------------------
 
 	//------------------------------------------------------------------------
 	// Example Text.
 	//------------------------------------------------------------------------
-	std::string size = std::to_string(zookeepers.size());
-	const char* size_c = size.c_str();
-	App::Print(100, 100, size_c);
+	//std::string size = std::to_string(zookeepers->zookeeperSprites.size());
+	//const char* size_c = size.c_str();
+	//App::Print(100, 100, size_c);
 
 	//------------------------------------------------------------------------
 	// Example Line Drawing.
@@ -300,9 +284,10 @@ void Render()
 // Just before the app exits.
 //------------------------------------------------------------------------
 void Shutdown()
-{	
+{
 	//------------------------------------------------------------------------
 	// Example Sprite Code....
 	delete alpaca;
+	delete zookeepers;
 	//------------------------------------------------------------------------
 }
