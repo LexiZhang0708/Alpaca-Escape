@@ -58,7 +58,7 @@ public:
 	void AddZookeeper()
 	{
 		CSimpleSprite* zookeeperSprite;
-		zookeeperSprite = App::CreateSprite(".\\TestData\\zookeeper2.png", 1, 1);
+		zookeeperSprite = App::CreateSprite(".\\TestData\\zookeeper.png", 1, 1);
 
 		auto clamp = [](float n, float min, float max) {
 			if (n < min) n = min;
@@ -141,7 +141,8 @@ static void HandleAlpacaZookeeperCollision()
 		if (isColliding(alpaca->alpacaSprite, zookeeper)) {
 			zookeeper->SetAngle(-PI/2.2f);
 			if (!alpaca->isInvincible)
-			{
+			{	
+				App::PlaySound(".\\TestData\\Test.wav");
 				alpaca->hearts--;
 				alpaca->isInvincible = true;
 				alpaca->invisibleStartTime = std::chrono::steady_clock::now();
@@ -205,12 +206,40 @@ static void UpdateZookeeperPos(float deltaTime) {
 }
 
 
+static void DrawSpitsCount()
+{
+	for (int i = 0; i < alpaca->spitsCount; i++)
+	{
+		float posY = 700;
+		float posX = 50 + 35 * i;
+		CSimpleSprite* spit = App::CreateSprite(".\\TestData\\spit.png", 1, 1);
+		spit->SetScale(1.5f);
+		spit->SetAngle(PI / 2.0f);
+		spit->SetPosition(posX, posY);
+		spit->Draw();
+	}
+}
+
+
+static void DrawHeartCount()
+{
+	for (int i = 0; i < alpaca->hearts; i++)
+	{
+		float posY = 630;
+		float posX = 60 + 55 * i;
+		CSimpleSprite* heart = App::CreateSprite(".\\TestData\\heart.png", 1, 1);
+		heart->SetScale(1.5f);
+		heart->SetPosition(posX, posY);
+		heart->Draw();
+	}
+}
+
 //------------------------------------------------------------------------
 // Called before first update. Do any initial setup here.
 //------------------------------------------------------------------------
 void Init()
 {
-	alpaca->alpacaSprite = App::CreateSprite(".\\TestData\\alpaca2.png", 1, 1);
+	alpaca->alpacaSprite = App::CreateSprite(".\\TestData\\alpaca.png", 1, 1);
 	alpaca->alpacaSprite->SetPosition(100.0f, 400.0f);
 }
 
@@ -221,37 +250,44 @@ void Init()
 //------------------------------------------------------------------------
 void Update(float deltaTime)
 {	
-	UpdateAlpacaPos(deltaTime);
-	if (App::GetController().CheckButton(XINPUT_GAMEPAD_DPAD_RIGHT, true))
+	if (alpaca->hearts)
 	{
-		alpaca->AddSpit();
-		App::PlaySound(".\\TestData\\Test.wav");
-	}
-	if (alpaca->isInvincible)
-	{
-		if (std::chrono::steady_clock::now() >= alpaca->invisibleStartTime + std::chrono::seconds(2)) {
-			alpaca->isInvincible = false;
-			alpaca->alpacaSprite->SetColor(1.0f, 1.0f, 1.0f);
-			alpaca->alpacaSprite->SetAngle(0.0f);
-			alpaca->alpacaSprite->SetScale(1.0f);
+		UpdateAlpacaPos(deltaTime);
+		if (App::GetController().CheckButton(XINPUT_GAMEPAD_DPAD_RIGHT, true))
+		{
+			if (alpaca->spitsCount)
+			{
+				alpaca->AddSpit();
+				alpaca->spitsCount--;
+				App::PlaySound(".\\TestData\\Test.wav");
+			}
 		}
+		if (alpaca->isInvincible)
+		{
+			if (std::chrono::steady_clock::now() >= alpaca->invisibleStartTime + std::chrono::seconds(2)) {
+				alpaca->isInvincible = false;
+				alpaca->alpacaSprite->SetColor(1.0f, 1.0f, 1.0f);
+				alpaca->alpacaSprite->SetAngle(0.0f);
+				alpaca->alpacaSprite->SetScale(1.0f);
+			}
+		}
+
+		bool hasSpits = !alpaca->spits.empty();
+		bool hasZookeepers = !zookeepers->zookeeperSprites.empty();
+
+		if (hasSpits) UpdateSpitPos(deltaTime);
+
+		if (GenerateRandNum() < 0.05 && zookeepers->zookeeperSprites.size() < zookeepers->MAX_ZOOKEEPER_COUNT) zookeepers->AddZookeeper();
+
+		if (hasZookeepers)
+		{
+			zookeepers->RemoveOutOfBoundZookepers();
+			UpdateZookeeperPos(deltaTime);
+			HandleAlpacaZookeeperCollision();
+		}
+
+		if (hasSpits && hasZookeepers) HandleSpitZookeepersCollision();
 	}
-
-	bool hasSpits = !alpaca->spits.empty();
-	bool hasZookeepers = !zookeepers->zookeeperSprites.empty();
-
-	if (hasSpits) UpdateSpitPos(deltaTime);
-
-	if (GenerateRandNum() < 0.05 && zookeepers->zookeeperSprites.size() < zookeepers->MAX_ZOOKEEPER_COUNT) zookeepers->AddZookeeper();
-
-	if (hasZookeepers)
-	{
-		zookeepers->RemoveOutOfBoundZookepers();
-		UpdateZookeeperPos(deltaTime);
-		HandleAlpacaZookeeperCollision();
-	}
-	
-	if (hasSpits && hasZookeepers) HandleSpitZookeepersCollision();
 }
 
 
@@ -280,14 +316,19 @@ void Render()
 			spit->Draw();
 		}
 	}
+
+	DrawSpitsCount();
+	DrawHeartCount();
 	//------------------------------------------------------------------------
 
 	//------------------------------------------------------------------------
 	// Example Text.
 	//------------------------------------------------------------------------
-	std::string heartCount = std::to_string(alpaca->hearts);
-	const char* heartCountStr = heartCount.c_str();
-	App::Print(100, 100, heartCountStr);
+	if (!alpaca->hearts)
+	{
+		App::Print(400, 400, "Game Over.", 1.0f, 0.0f, 0.0f, GLUT_BITMAP_TIMES_ROMAN_24);
+	}
+	
 
 	//------------------------------------------------------------------------
 	// Example Line Drawing.
