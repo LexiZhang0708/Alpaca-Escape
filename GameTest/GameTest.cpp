@@ -49,16 +49,17 @@ public:
 };
 
 
-class Zookeepers {
+class BackgroundObj {
 public:
-	const float ZOOKEEPER_SPEED = 0.3f;
-	const int MAX_ZOOKEEPER_COUNT = 12;
-	std::vector<CSimpleSprite*> zookeeperSprites;
+	const float BACKGROUND_SPEED = 0.3f;
+	std::vector<CSimpleSprite*> backgroundSprites;
+	std::string imgName;
 
-	void AddZookeeper()
+	void AddBackgroundObj()
 	{
-		CSimpleSprite* zookeeperSprite;
-		zookeeperSprite = App::CreateSprite(".\\TestData\\zookeeper.png", 1, 1);
+		CSimpleSprite* backgroundSprite;
+		std::string parentDir = ".\\TestData\\";
+		backgroundSprite = App::CreateSprite((parentDir + imgName).c_str(), 1, 1);
 
 		auto clamp = [](float n, float min, float max) {
 			if (n < min) n = min;
@@ -66,30 +67,53 @@ public:
 			return n;
 			};
 
-		float min = zookeeperSprite->GetHeight() / 2.0f;
+		float min = backgroundSprite->GetHeight() / 2.0f;
 		float max = APP_VIRTUAL_HEIGHT - min;
 		float pos_y = clamp(GenerateRandNum() * APP_VIRTUAL_HEIGHT, min, max);
 
-		zookeeperSprite->SetPosition(APP_VIRTUAL_WIDTH, pos_y);
-		zookeeperSprites.push_back(zookeeperSprite);
+		backgroundSprite->SetPosition(APP_VIRTUAL_WIDTH, pos_y);
+		backgroundSprites.push_back(backgroundSprite);
 	}
 
-	void RemoveOutOfBoundZookepers()
+	void RemoveOutOfBoundObjs()
 	{
-		auto isOutOfBound = [](CSimpleSprite* zookeeper)
+		auto isOutOfBound = [](CSimpleSprite* backgroundObj)
 			{
 				float posX, posY;
-				zookeeper->GetPosition(posX, posY);
-				return posX + zookeeper->GetWidth() / 2.0f < 0.0f;
+				backgroundObj->GetPosition(posX, posY);
+				return posX + backgroundObj->GetWidth() / 2.0f < 0.0f;
 			};
 
-		zookeeperSprites.erase(remove_if(zookeeperSprites.begin(), zookeeperSprites.end(), isOutOfBound), zookeeperSprites.end());
+		backgroundSprites.erase(remove_if(backgroundSprites.begin(), backgroundSprites.end(), isOutOfBound), backgroundSprites.end());
+	}
+};
+
+
+class Zookeepers : public BackgroundObj {
+public:
+	const int MAX_ZOOKEEPER_COUNT = 12;
+	const float ZOOKEEPER_SPAWN_PROB = 0.05f;
+
+	Zookeepers(const std::string& imgName) : BackgroundObj() {
+		this->imgName = imgName;
+	}
+};
+
+
+class WaterBottles : public BackgroundObj {
+public:
+	const int MAX_WATERBOTTLE_COUNT = 2;
+	const float WATERBOTTLE_SPAWN_PROB = 0.008f;
+
+	WaterBottles(const std::string& imgName) : BackgroundObj() {
+		this->imgName = imgName;
 	}
 };
 
 
 Alpaca* alpaca = new Alpaca;
-Zookeepers* zookeepers = new Zookeepers;
+Zookeepers* zookeepers = new Zookeepers("zookeeper.png");
+WaterBottles* waterbottles = new WaterBottles("water.png");
 
 
 //------------------------------------------------------------------------
@@ -114,10 +138,10 @@ static bool isColliding(CSimpleSprite* obj1, CSimpleSprite* obj2) {
 
 static void HandleSpitZookeepersCollision()
 {
-	std::vector<CSimpleSprite* > spitsToRemove, zookeepersToRemove;
+	std::vector<CSimpleSprite*> spitsToRemove, zookeepersToRemove;
 
 	for (const auto& spit : alpaca->spits) {
-		for (const auto& zookeeper : zookeepers->zookeeperSprites) {
+		for (const auto& zookeeper : zookeepers->backgroundSprites) {
 			if (isColliding(spit, zookeeper)) {
 				spitsToRemove.push_back(spit);
 				zookeepersToRemove.push_back(zookeeper);
@@ -130,14 +154,14 @@ static void HandleSpitZookeepersCollision()
 	}
 
 	for (const auto& zookeeperToRemove : zookeepersToRemove) {
-		zookeepers->zookeeperSprites.erase(std::remove(zookeepers->zookeeperSprites.begin(), zookeepers->zookeeperSprites.end(), zookeeperToRemove), zookeepers->zookeeperSprites.end());
+		zookeepers->backgroundSprites.erase(std::remove(zookeepers->backgroundSprites.begin(), zookeepers->backgroundSprites.end(), zookeeperToRemove), zookeepers->backgroundSprites.end());
 	}
 }
 
 
 static void HandleAlpacaZookeeperCollision()
 {
-	for (const auto& zookeeper : zookeepers->zookeeperSprites) {
+	for (const auto& zookeeper : zookeepers->backgroundSprites) {
 		if (isColliding(alpaca->alpacaSprite, zookeeper)) {
 			zookeeper->SetAngle(-PI/2.2f);
 			if (!alpaca->isInvincible)
@@ -151,6 +175,23 @@ static void HandleAlpacaZookeeperCollision()
 				alpaca->alpacaSprite->SetScale(1.2f);
 			}
 		}
+	}
+}
+
+
+static void HandleAlpacaWaterBottleCollision()
+{
+	std::vector<CSimpleSprite*> WaterBottlesToRemove;
+
+	for (const auto& waterbottle : waterbottles->backgroundSprites) {
+		if (isColliding(waterbottle, alpaca->alpacaSprite)) {
+			WaterBottlesToRemove.push_back(waterbottle);
+			if (alpaca->spitsCount < 5) alpaca->spitsCount++; 
+		}
+	}
+
+	for (const auto& WaterBottleToRemove : WaterBottlesToRemove) {
+		waterbottles->backgroundSprites.erase(std::remove(waterbottles->backgroundSprites.begin(), waterbottles->backgroundSprites.end(), WaterBottleToRemove), waterbottles->backgroundSprites.end());
 	}
 }
 
@@ -196,12 +237,23 @@ static void UpdateSpitPos(float deltaTime) {
 
 
 static void UpdateZookeeperPos(float deltaTime) {
-	for (const auto& zookeeper : zookeepers->zookeeperSprites)
+	for (const auto& zookeeper : zookeepers->backgroundSprites)
 	{
 		float posX, posY;
 		zookeeper->GetPosition(posX, posY);
-		posX -= zookeepers->ZOOKEEPER_SPEED * deltaTime;
+		posX -= zookeepers->BACKGROUND_SPEED * deltaTime;
 		zookeeper->SetPosition(posX, posY);
+	}
+}
+
+
+static void UpdateWaterBottlePos(float deltaTime) {
+	for (const auto& waterbottle : waterbottles->backgroundSprites)
+	{
+		float posX, posY;
+		waterbottle->GetPosition(posX, posY);
+		posX -= waterbottles->BACKGROUND_SPEED * deltaTime;
+		waterbottle->SetPosition(posX, posY);
 	}
 }
 
@@ -273,17 +325,27 @@ void Update(float deltaTime)
 		}
 
 		bool hasSpits = !alpaca->spits.empty();
-		bool hasZookeepers = !zookeepers->zookeeperSprites.empty();
+		bool hasZookeepers = !zookeepers->backgroundSprites.empty();
+		bool hasWaterBottles = !waterbottles->backgroundSprites.empty();
 
 		if (hasSpits) UpdateSpitPos(deltaTime);
 
-		if (GenerateRandNum() < 0.05 && zookeepers->zookeeperSprites.size() < zookeepers->MAX_ZOOKEEPER_COUNT) zookeepers->AddZookeeper();
+		if (GenerateRandNum() < zookeepers->ZOOKEEPER_SPAWN_PROB && zookeepers->backgroundSprites.size() < zookeepers->MAX_ZOOKEEPER_COUNT) zookeepers->AddBackgroundObj();
+
+		if (GenerateRandNum() < waterbottles->WATERBOTTLE_SPAWN_PROB && waterbottles->backgroundSprites.size() < waterbottles->MAX_WATERBOTTLE_COUNT) waterbottles->AddBackgroundObj();
 
 		if (hasZookeepers)
 		{
-			zookeepers->RemoveOutOfBoundZookepers();
+			zookeepers->RemoveOutOfBoundObjs();
 			UpdateZookeeperPos(deltaTime);
 			HandleAlpacaZookeeperCollision();
+		}
+
+		if (hasWaterBottles)
+		{	
+			waterbottles->RemoveOutOfBoundObjs();
+			UpdateWaterBottlePos(deltaTime);
+			HandleAlpacaWaterBottleCollision();
 		}
 
 		if (hasSpits && hasZookeepers) HandleSpitZookeepersCollision();
@@ -301,12 +363,20 @@ void Render()
 	// Example Sprite Code....
 	alpaca->alpacaSprite->Draw();
 
-	if (!zookeepers->zookeeperSprites.empty())
+	if (!zookeepers->backgroundSprites.empty())
 	{
-		for (const auto& zookeeper : zookeepers->zookeeperSprites)
+		for (const auto& zookeeper : zookeepers->backgroundSprites)
 			{
 				zookeeper->Draw();
 			}
+	}
+
+	if (!waterbottles->backgroundSprites.empty())
+	{
+		for (const auto& waterbottle : waterbottles->backgroundSprites)
+		{
+			waterbottle->Draw();
+		}
 	}
 	
 	if (!alpaca->spits.empty())
@@ -329,7 +399,6 @@ void Render()
 		App::Print(400, 400, "Game Over.", 1.0f, 0.0f, 0.0f, GLUT_BITMAP_TIMES_ROMAN_24);
 	}
 	
-
 	//------------------------------------------------------------------------
 	// Example Line Drawing.
 	//------------------------------------------------------------------------
@@ -361,4 +430,5 @@ void Shutdown()
 {
 	delete alpaca;
 	delete zookeepers;
+	delete waterbottles;
 }
