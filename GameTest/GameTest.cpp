@@ -12,26 +12,23 @@
 #include "BackgroundObj.h"
 #include "CollisionHandler.h"
 
-// Global game objects using smart pointers
+
 std::unique_ptr<Alpaca> alpaca;
 std::unique_ptr<Zookeepers> zookeepers;
 std::unique_ptr<WaterBottles> waterbottles;
 
+
 // Game pause state
 bool gamePaused = false;
 
-//------------------------------------------------------------------------
-// Initialization
-//------------------------------------------------------------------------
+
 void Init() {
     alpaca = std::make_unique<Alpaca>();
     zookeepers = std::make_unique<Zookeepers>("zookeeper.png");
     waterbottles = std::make_unique<WaterBottles>("water.png");
 }
 
-//------------------------------------------------------------------------
-// Update your simulation here
-//------------------------------------------------------------------------
+
 void Update(float deltaTime) {
     // Check if the pause button is pressed
     if (App::IsKeyPressed('P')) {
@@ -84,9 +81,7 @@ void Update(float deltaTime) {
     }
 }
 
-//------------------------------------------------------------------------
-// Rendering
-//------------------------------------------------------------------------
+
 void Render() {
     alpaca->Render();
     zookeepers->Render();
@@ -104,9 +99,7 @@ void Render() {
     }
 }
 
-//------------------------------------------------------------------------
-// Shutdown
-//------------------------------------------------------------------------
+
 void Shutdown() {
-    // Smart pointers automatically manage memory, so no need to manually delete objects.
+ 
 }
