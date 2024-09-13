@@ -21,6 +21,10 @@
     <ClCompile Include="stb_image\stb_image.cpp">
       <Filter>stb_image</Filter>
     </ClCompile>
+    <ClCompile Include="Utils.cpp" />
+    <ClCompile Include="Alpaca.cpp" />
+    <ClCompile Include="BackgroundObj.cpp" />
+    <ClCompile Include="CollisionHandler.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
@@ -48,6 +52,9 @@
     <ClInclude Include="stb_image\stb_image.h">
       <Filter>stb_image</Filter>
     </ClInclude>
+    <ClInclude Include="Alpaca.h" />
+    <ClInclude Include="BackgroundObj.h" />
+    <ClInclude Include="CollisionHandler.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="stb_image">
